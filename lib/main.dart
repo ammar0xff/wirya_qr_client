@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart'; // Import Firebase options
 import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
 import 'screens/login_screen.dart'; // Import Login Screen
+import 'screens/about_screen.dart'; // Import About Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
 import 'package:flutter_background_service/flutter_background_service.dart';
