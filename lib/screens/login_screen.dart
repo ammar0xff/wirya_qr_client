@@ -11,33 +11,43 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String errorMessage = "";
+  String _errorMessage = '';
 
   Future<void> _login() async {
+    String username = _usernameController.text;
+    String password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter both username and password.';
+      });
+      return;
+    }
+
     try {
       DatabaseReference usersRef = FirebaseDatabase.instance.ref("users");
-      DatabaseEvent event = await usersRef.child(_usernameController.text).once();
+      DatabaseEvent event = await usersRef.child(username).once();
       if (event.snapshot.value != null) {
         Map<dynamic, dynamic> user = event.snapshot.value as Map<dynamic, dynamic>;
-        if (user["password"] == _passwordController.text) {
-          _saveUserCredentials(_usernameController.text, _passwordController.text);
+        if (user["password"] == password) {
+          _saveUserCredentials(username, password);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => DashboardScreen(user: _usernameController.text)),
+            MaterialPageRoute(builder: (context) => DashboardScreen(user: username)),
           );
         } else {
           setState(() {
-            errorMessage = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+            _errorMessage = 'Invalid username or password.';
           });
         }
       } else {
         setState(() {
-          errorMessage = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+          _errorMessage = 'Invalid username or password.';
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        _errorMessage = e.toString();
       });
     }
   }
@@ -71,11 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _login,
               child: Text("تسجيل الدخول"),
             ),
-            if (errorMessage.isNotEmpty)
+            if (_errorMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  errorMessage,
+                  _errorMessage,
                   style: TextStyle(color: Colors.red),
                 ),
               ),

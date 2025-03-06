@@ -37,7 +37,11 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       autoStart: true,
-      isForegroundMode: false, // Set to false to avoid showing notifications
+      isForegroundMode: true, // Set to true to ensure the service runs continuously
+      notificationChannelId: 'my_foreground',
+      initialNotificationTitle: 'QR Client',
+      initialNotificationContent: 'App is running in the background',
+      foregroundServiceNotificationId: 888,
     ),
     iosConfiguration: IosConfiguration(
       onForeground: onStart,
@@ -49,6 +53,13 @@ Future<void> initializeService() async {
 }
 
 void onStart(ServiceInstance service) {
+  if (service is AndroidServiceInstance) {
+    service.setForegroundNotificationInfo(
+      title: "QR Client",
+      content: "App is running in the background",
+    );
+  }
+
   service.on('stopService').listen((event) {
     service.stopSelf();
   });
