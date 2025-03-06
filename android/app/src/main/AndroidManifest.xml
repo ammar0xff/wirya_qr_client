@@ -42,43 +42,35 @@
         <receiver
             android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
         <receiver
             android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
         <service
             android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
             android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false"
-            tools:replace="android:exported" />
+            android:exported="false" />
         <service
             android:name="androidx.work.impl.background.systemjob.SystemJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false"
-            tools:replace="android:exported" />
+            android:exported="false" />
         <receiver
             android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
         <receiver
             android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
         <receiver
             android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
         <receiver
             android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy"
             android:enabled="true"
-            android:exported="false"
-            tools:replace="android:enabled" />
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

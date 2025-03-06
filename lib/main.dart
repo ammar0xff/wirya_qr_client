@@ -6,7 +6,8 @@ import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
 import 'screens/login_screen.dart'; // Import Login Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
-import 'package:flutter_background_service/flutter_background_service.dart'; // Import Flutter Background Service
+import 'package:geolocator/geolocator.dart'; // Import Geolocator package
+import 'package:workmanager/workmanager.dart'; // Import WorkManager
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,57 +25,36 @@ void main() async {
       LocationService.startLocationUpdates(username);
     }
 
-    await initializeService();
+    await initializeWorkManager();
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
   }
 }
 
-Future<void> initializeService() async {
-  final service = FlutterBackgroundService();
-
-  await service.configure(
-    androidConfiguration: AndroidConfiguration(
-      onStart: onStart,
-      autoStart: true,
-      isForegroundMode: true, // Set to true to ensure the service runs continuously
-      notificationChannelId: 'my_foreground',
-      initialNotificationTitle: 'QR Client',
-      initialNotificationContent: 'App is running in the background',
-      foregroundServiceNotificationId: 888,
-    ),
-    iosConfiguration: IosConfiguration(
-      onForeground: onStart,
-      onBackground: onIosBackground,
-    ),
-  );
-
-  service.startService();
-}
-
-void onStart(ServiceInstance service) {
-  if (service is AndroidServiceInstance) {
-    service.setForegroundNotificationInfo(
-      title: "QR Client",
-      content: "App is running in the background",
-    );
-  }
-
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
-
-  SharedPreferences.getInstance().then((prefs) {
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    // Perform background task
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     String? username = prefs.getString('username');
     if (username != null) {
-      LocationService.startLocationUpdates(username);
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      LocationService.updateLocation(username, position);
     }
+    return Future.value(true);
   });
 }
 
-bool onIosBackground(ServiceInstance service) {
-  WidgetsFlutterBinding.ensureInitialized();
-  return true;
+Future<void> initializeWorkManager() async {
+  await Workmanager().initialize(
+    callbackDispatcher,
+    isInDebugMode: true, // Set to false in production
+  );
+
+  await Workmanager().registerPeriodicTask(
+    "1",
+    "simplePeriodicTask",
+    frequency: Duration(minutes: 15), // Run every 15 minutes
+  );
 }
 
 class QRClientApp extends StatelessWidget {
