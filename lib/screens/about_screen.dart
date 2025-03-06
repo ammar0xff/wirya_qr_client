@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/location_service.dart';
 
 class AboutScreen extends StatelessWidget {
   @override
@@ -34,6 +37,23 @@ class AboutScreen extends StatelessWidget {
               "3. View analytics: Analyze your scanning activity with comprehensive analytics.\n"
               "4. Enable/disable beep sound: Customize your scanning experience by enabling or disabling the beep sound.\n"
               "5. Share scanned data via Telegram bot: Share the scanned QR code data with others using a Telegram bot.",
+            ),
+            SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                  String? username = prefs.getString('username');
+                  if (username != null) {
+                    await LocationService.updateLocation(username, position);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Location uploaded successfully")));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("User not logged in")));
+                  }
+                },
+                child: Text("Upload Location"),
+              ),
             ),
           ],
         ),

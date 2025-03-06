@@ -7,7 +7,7 @@ import 'screens/login_screen.dart'; // Import Login Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
+// import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler

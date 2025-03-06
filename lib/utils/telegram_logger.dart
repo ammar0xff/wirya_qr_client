@@ -16,7 +16,6 @@ class TelegramLogger {
  - التاريخ: $date
  - الماسح: $scannerName
  - الوقت: $time
- - الموقع: $scanLocation
  - رابط الموقع: $googleMapsLink
 
 تفاصيل التاجر:
