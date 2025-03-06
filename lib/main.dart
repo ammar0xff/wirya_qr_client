@@ -6,6 +6,7 @@ import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
 import 'screens/login_screen.dart'; // Import Login Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
+import 'utils/battery_optimization_handler.dart'; // Import Battery Optimization Handler
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:workmanager/workmanager.dart'; // Import WorkManager
 
@@ -64,6 +65,8 @@ class QRClientApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    BatteryOptimizationHandler.requestDisableBatteryOptimizations(context); // Request to disable battery optimizations
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: initialScreen,
