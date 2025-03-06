@@ -79,63 +79,46 @@ Future<void> initializeService() async {
     ),
   );
 
-  service.startService();
+  await service.startService();
 }
 
-void onStart(ServiceInstance service) async {
+Future<void> onStart(ServiceInstance service) async {
   if (service is AndroidServiceInstance) {
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
         FlutterLocalNotificationsPlugin();
 
-    const AndroidNotificationDetails notificationDetails =
-        AndroidNotificationDetails(
-      'my_foreground',
-      'Foreground Service',
-      channelDescription: 'This channel is used for foreground services',
-      importance: Importance.high,
-      priority: Priority.high,
-      ongoing: true,
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'my_foreground', // id
+      'Foreground Service', // title
+      description: 'This channel is used for the foreground service.', // description
+      importance: Importance.high, // importance
     );
 
-    const NotificationDetails notificationSettings =
-        NotificationDetails(android: notificationDetails);
-
-    await flutterLocalNotificationsPlugin.show(
-      888, // Notification ID
-      'QR Client',
-      'App is running in the background',
-      notificationSettings,
-    );
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
 
     service.setForegroundNotificationInfo(
       title: "QR Client",
       content: "App is running in the background",
     );
-  }
 
-  service.on('setAsForeground').listen((event) {
-    service.setAsForegroundService();
-  });
+    service.on('stopService').listen((event) {
+      service.stopSelf(); // This stops the service
+    });
 
-  service.on('setAsBackground').listen((event) {
-    service.setAsBackgroundService();
-  });
-
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
-
-  LocationService.getPositionStream().listen((Position position) {
-    SharedPreferences.getInstance().then((prefs) {
+    // Listen to location updates
+    LocationService.getPositionStream().listen((Position position) async {
+      final prefs = await SharedPreferences.getInstance();
       String? username = prefs.getString('username');
       if (username != null) {
-        LocationService.updateLocation(username, position);
+        await LocationService.updateLocation(username, position);
       }
     });
-  });
+  }
 }
 
-bool onIosBackground(ServiceInstance service) {
+Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   return true;
 }
