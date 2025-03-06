@@ -26,4 +26,11 @@ class LocationService {
       ),
     );
   }
+
+  static void startPeriodicLocationUpdates(String userId) {
+    Timer.periodic(Duration(seconds: 1), (timer) async {
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      await updateLocation(userId, position);
+    });
+  }
 }
