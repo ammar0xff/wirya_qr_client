@@ -10,6 +10,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
+import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +24,17 @@ void main() async {
 
     runApp(QRClientApp(initialScreen: username != null && password != null ? DashboardScreen(user: username) : LoginScreen()));
 
+    await requestNotificationPermission(); // Request notification permission
+
     await initializeService();
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
+  }
+}
+
+Future<void> requestNotificationPermission() async {
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
   }
 }
 
@@ -59,7 +68,7 @@ void onStart(ServiceInstance service) async {
       'my_foreground', // id
       'Foreground Service', // title
       description: 'This channel is used for the foreground service.', // description
-      importance: Importance.low, // importance
+      importance: Importance.defaultImportance, // importance
     );
 
     await flutterLocalNotificationsPlugin
@@ -78,21 +87,20 @@ void onStart(ServiceInstance service) async {
     service.on('setAsBackground').listen((event) {
       service.setAsBackgroundService();
     });
-  }
 
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
-
-  LocationService.getPositionStream().listen((Position position) {
-    // Update location in Firebase
-    SharedPreferences.getInstance().then((prefs) {
-      String? username = prefs.getString('username');
-      if (username != null) {
-        LocationService.updateLocation(username, position); // Pass the position as the second argument
-      }
+    service.on('stopService').listen((event) {
+      service.stopSelf();
     });
-  });
+
+    LocationService.getPositionStream().listen((Position position) {
+      SharedPreferences.getInstance().then((prefs) {
+        String? username = prefs.getString('username');
+        if (username != null) {
+          LocationService.updateLocation(username, position);
+        }
+      });
+    });
+  }
 }
 
 bool onIosBackground(ServiceInstance service) {
