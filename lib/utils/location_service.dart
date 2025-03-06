@@ -1,11 +1,16 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 
 class LocationService {
-  static Future<void> updateLocation(String userId) async {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  static void startLocationUpdates(String userId) {
+    getPositionStream().listen((Position position) async {
+      await updateLocation(userId, position);
+    });
+  }
 
-    DatabaseReference ref = FirebaseDatabase.instance.ref("locations/$userId");
+  static Future<void> updateLocation(String userId, Position position) async {
+    DatabaseReference ref = FirebaseDatabase.instance.ref("users/$userId/current_location");
     await ref.set({
       "latitude": position.latitude,
       "longitude": position.longitude,

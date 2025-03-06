@@ -4,11 +4,11 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
-      java: 17
+      java: 11
     scripts:
       - name: Install dependencies
         script: |
-          flutter pub get ; flutter pub outdated ; flutter pub upgrade --major-versions
+          flutter pub get
       - name: Build APK
         script: |
           flutter build apk --release

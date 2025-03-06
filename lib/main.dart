@@ -6,9 +6,7 @@ import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
 import 'screens/login_screen.dart'; // Import Login Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
-import 'package:geolocator/geolocator.dart'; // Import Geolocator package
+import 'package:flutter_background_service/flutter_background_service.dart'; // Import Flutter Background Service
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +19,10 @@ void main() async {
     String? password = prefs.getString('password');
 
     runApp(QRClientApp(initialScreen: username != null && password != null ? DashboardScreen(user: username) : LoginScreen()));
+
+    if (username != null) {
+      LocationService.startLocationUpdates(username);
+    }
 
     await initializeService();
   } catch (e) {
@@ -35,11 +37,7 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       autoStart: true,
-      isForegroundMode: true,
-      notificationChannelId: 'my_foreground',
-      initialNotificationTitle: 'QR Client',
-      initialNotificationContent: 'App is running in the background',
-      foregroundServiceNotificationId: 888,
+      isForegroundMode: false, // Set to false to avoid showing notifications
     ),
     iosConfiguration: IosConfiguration(
       onForeground: onStart,
@@ -51,28 +49,15 @@ Future<void> initializeService() async {
 }
 
 void onStart(ServiceInstance service) {
-  if (service is AndroidServiceInstance) {
-    service.on('setAsForeground').listen((event) {
-      service.setAsForegroundService();
-    });
-
-    service.on('setAsBackground').listen((event) {
-      service.setAsBackgroundService();
-    });
-  }
-
   service.on('stopService').listen((event) {
     service.stopSelf();
   });
 
-  LocationService.getPositionStream().listen((Position position) {
-    // Update location in Firebase
-    SharedPreferences.getInstance().then((prefs) {
-      String? username = prefs.getString('username');
-      if (username != null) {
-        LocationService.updateLocation(username);
-      }
-    });
+  SharedPreferences.getInstance().then((prefs) {
+    String? username = prefs.getString('username');
+    if (username != null) {
+      LocationService.startLocationUpdates(username);
+    }
   });
 }
 
