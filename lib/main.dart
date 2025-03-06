@@ -41,6 +41,28 @@ Future<void> requestNotificationPermission() async {
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'my_foreground', // id
+    'Foreground Service', // title
+    description: 'This channel is used for the foreground service.',
+    importance: Importance.high, // Set importance to High
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  var initializationSettingsAndroid =
+      const AndroidInitializationSettings('@mipmap/ic_launcher');
+  var initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
@@ -62,45 +84,55 @@ Future<void> initializeService() async {
 
 void onStart(ServiceInstance service) async {
   if (service is AndroidServiceInstance) {
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
 
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'my_foreground', // id
-      'Foreground Service', // title
-      description: 'This channel is used for the foreground service.', // description
-      importance: Importance.defaultImportance, // importance
+    const AndroidNotificationDetails notificationDetails =
+        AndroidNotificationDetails(
+      'my_foreground',
+      'Foreground Service',
+      channelDescription: 'This channel is used for foreground services',
+      importance: Importance.high,
+      priority: Priority.high,
+      ongoing: true,
     );
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    const NotificationDetails notificationSettings =
+        NotificationDetails(android: notificationDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      888, // Notification ID
+      'QR Client',
+      'App is running in the background',
+      notificationSettings,
+    );
 
     service.setForegroundNotificationInfo(
       title: "QR Client",
       content: "App is running in the background",
     );
-
-    service.on('setAsForeground').listen((event) {
-      service.setAsForegroundService();
-    });
-
-    service.on('setAsBackground').listen((event) {
-      service.setAsBackgroundService();
-    });
-
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
-
-    LocationService.getPositionStream().listen((Position position) {
-      SharedPreferences.getInstance().then((prefs) {
-        String? username = prefs.getString('username');
-        if (username != null) {
-          LocationService.updateLocation(username, position);
-        }
-      });
-    });
   }
+
+  service.on('setAsForeground').listen((event) {
+    service.setAsForegroundService();
+  });
+
+  service.on('setAsBackground').listen((event) {
+    service.setAsBackgroundService();
+  });
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  LocationService.getPositionStream().listen((Position position) {
+    SharedPreferences.getInstance().then((prefs) {
+      String? username = prefs.getString('username');
+      if (username != null) {
+        LocationService.updateLocation(username, position);
+      }
+    });
+  });
 }
 
 bool onIosBackground(ServiceInstance service) {
