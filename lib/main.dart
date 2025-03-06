@@ -6,8 +6,9 @@ import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
 import 'screens/login_screen.dart'; // Import Login Screen
 import 'utils/permissions_handler.dart'; // Import Permissions Handler
 import 'utils/location_service.dart'; // Import Location Service
-import 'utils/battery_optimization_handler.dart'; // Import Battery Optimization Handler
-import 'package:flutter_background_service/flutter_background_service.dart'; // Import Flutter Background Service
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
+import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 
 void main() async {
@@ -22,10 +23,6 @@ void main() async {
 
     runApp(QRClientApp(initialScreen: username != null && password != null ? DashboardScreen(user: username) : LoginScreen()));
 
-    if (username != null) {
-      LocationService.startLocationUpdates(username);
-    }
-
     await initializeService();
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
@@ -39,7 +36,7 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       autoStart: true,
-      isForegroundMode: true, // Set to true to ensure the service runs continuously
+      isForegroundMode: true,
       notificationChannelId: 'my_foreground',
       initialNotificationTitle: 'QR Client',
       initialNotificationContent: 'App is running in the background',
@@ -62,7 +59,7 @@ void onStart(ServiceInstance service) async {
       'my_foreground', // id
       'Foreground Service', // title
       description: 'This channel is used for the foreground service.', // description
-      importance: Importance.low, // Set importance to low
+      importance: Importance.low, // importance
     );
 
     await flutterLocalNotificationsPlugin
@@ -87,11 +84,14 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
-  SharedPreferences.getInstance().then((prefs) {
-    String? username = prefs.getString('username');
-    if (username != null) {
-      LocationService.startLocationUpdates(username);
-    }
+  LocationService.getPositionStream().listen((Position position) {
+    // Update location in Firebase
+    SharedPreferences.getInstance().then((prefs) {
+      String? username = prefs.getString('username');
+      if (username != null) {
+        LocationService.updateLocation(username, position); // Pass the position as the second argument
+      }
+    });
   });
 }
 
@@ -107,8 +107,6 @@ class QRClientApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    BatteryOptimizationHandler.requestDisableBatteryOptimizations(context); // Request to disable battery optimizations
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: initialScreen,
