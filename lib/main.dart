@@ -11,7 +11,6 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
-import 'package:wakelock/wakelock.dart'; // Import Wakelock package
 import 'dart:async'; // Import dart:async for Timer
 
 void main() async {
@@ -116,9 +115,6 @@ Future<void> onStart(ServiceInstance service) async {
       content: "App is running in the background",
     );
 
-    // Enable wake lock to keep the CPU awake
-    Wakelock.enable();
-
     // Start periodic location updates
     Timer.periodic(Duration(seconds: 1), (timer) async {
       try {
@@ -140,9 +136,8 @@ Future<void> onStart(ServiceInstance service) async {
       }
     });
 
-    // Disable wake lock when the service stops
+    // Stop the service when requested
     service.on('stopService').listen((event) {
-      Wakelock.disable();
       service.stopSelf();
     });
   }
