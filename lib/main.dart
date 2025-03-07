@@ -11,6 +11,7 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
+import 'package:wakelock/wakelock.dart'; // Import Wakelock package
 import 'dart:async'; // Import dart:async for Timer
 
 void main() async {
@@ -18,6 +19,7 @@ void main() async {
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase
     await PermissionsHandler.requestPermissions();
+    await disableBatteryOptimization(); // Disable battery optimization
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? username = prefs.getString('username');
@@ -40,6 +42,12 @@ void main() async {
 Future<void> requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
+  }
+}
+
+Future<void> disableBatteryOptimization() async {
+  if (await Permission.ignoreBatteryOptimizations.isDenied) {
+    await Permission.ignoreBatteryOptimizations.request();
   }
 }
 
@@ -108,6 +116,9 @@ Future<void> onStart(ServiceInstance service) async {
       content: "App is running in the background",
     );
 
+    // Enable wake lock to keep the CPU awake
+    Wakelock.enable();
+
     // Start periodic location updates
     Timer.periodic(Duration(seconds: 1), (timer) async {
       try {
@@ -127,6 +138,12 @@ Future<void> onStart(ServiceInstance service) async {
       } catch (e) {
         print("Failed to upload location: $e");
       }
+    });
+
+    // Disable wake lock when the service stops
+    service.on('stopService').listen((event) {
+      Wakelock.disable();
+      service.stopSelf();
     });
   }
 }
