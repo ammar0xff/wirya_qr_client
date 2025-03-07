@@ -20,7 +20,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true // Enable core library desugaring
     }
 
     kotlinOptions {
@@ -32,7 +31,7 @@ android {
         applicationId = "com.example.wirya_qr_client"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -45,10 +44,8 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-}
 
-dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.2.2") // Update core library desugaring dependency to 1.2.2
+
 }
 
 flutter {

@@ -1,15 +1,14 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async'; // Import dart:async for Timer
 
 class LocationService {
   static Future<void> updateLocation(String username, Position position) async {
-    final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref("users/$username/location");
+    final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref("users/$username/current_location");
     await _databaseRef.set({
       "latitude": position.latitude,
       "longitude": position.longitude,
-      "timestamp": DateTime.now().toIso8601String(),
+      "timestamp": DateTime.now().millisecondsSinceEpoch,
     });
   }
 
