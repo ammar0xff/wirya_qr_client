@@ -25,6 +25,8 @@ dependencies:
   audioplayers: ^6.2.0
   flutter_background_service: ^5.1.0
   flutter_local_notifications: ^9.0.0+1
+  wakelock: ^0.6.2 # Add this line
+  workmanager: ^0.5.1 # Add this line
 
 dev_dependencies:
   flutter_test:

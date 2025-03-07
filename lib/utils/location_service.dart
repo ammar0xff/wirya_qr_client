@@ -21,7 +21,7 @@ class LocationService {
   static Stream<Position> getPositionStream() {
     return Geolocator.getPositionStream(
       locationSettings: LocationSettings(
-        accuracy: LocationAccuracy.high,
+        accuracy: LocationAccuracy.bestForNavigation, // Use best accuracy for navigation
         distanceFilter: 10, // Update location every 10 meters
       ),
     );
@@ -29,7 +29,7 @@ class LocationService {
 
   static void startPeriodicLocationUpdates(String userId) {
     Timer.periodic(Duration(seconds: 1), (timer) async {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.bestForNavigation);
       await updateLocation(userId, position);
     });
   }

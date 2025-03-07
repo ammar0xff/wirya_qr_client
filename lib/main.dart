@@ -11,7 +11,16 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
+import 'package:wakelock/wakelock.dart'; // Import Wakelock package
+import 'package:workmanager/workmanager.dart'; // Import WorkManager package
 import 'dart:async'; // Import dart:async for Timer
+
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    // Perform background task (e.g., fetch location and upload to Firebase)
+    return Future.value(true);
+  });
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +38,17 @@ void main() async {
     await requestNotificationPermission(); // Request notification permission
 
     await initializeService(); // Initialize the background service
+
+    // Initialize WorkManager
+    Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: true,
+    );
+    Workmanager().registerPeriodicTask(
+      "locationTask",
+      "locationTask",
+      frequency: Duration(minutes: 15),
+    );
 
     if (username != null) {
       LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
@@ -115,6 +135,9 @@ Future<void> onStart(ServiceInstance service) async {
       content: "App is running in the background",
     );
 
+    // Enable wake lock to keep the CPU awake
+    Wakelock.enable();
+
     // Start periodic location updates
     Timer.periodic(Duration(seconds: 1), (timer) async {
       try {
@@ -138,6 +161,7 @@ Future<void> onStart(ServiceInstance service) async {
 
     // Stop the service when requested
     service.on('stopService').listen((event) {
+      Wakelock.disable();
       service.stopSelf();
     });
   }
