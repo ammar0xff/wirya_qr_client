@@ -12,6 +12,7 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
+import 'dart:async'; // Import dart:async for Timer
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,7 @@ void main() async {
 
     await requestNotificationPermission(); // Request notification permission
 
-    await initializeService();
+    await initializeService(); // Initialize the background service
 
     if (username != null) {
       LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
@@ -108,16 +109,24 @@ Future<void> onStart(ServiceInstance service) async {
       content: "App is running in the background",
     );
 
-    service.on('stopService').listen((event) {
-      service.stopSelf(); // This stops the service
-    });
+    // Start periodic location updates
+    Timer.periodic(Duration(seconds: 1), (timer) async {
+      try {
+        // Fetch the current position
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
 
-    // Listen to location updates
-    LocationService.getPositionStream().listen((Position position) async {
-      final prefs = await SharedPreferences.getInstance();
-      String? username = prefs.getString('username');
-      if (username != null) {
-        await LocationService.updateLocation(username, position);
+        // Get the username from SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        String? username = prefs.getString('username');
+
+        if (username != null) {
+          // Upload the location
+          await LocationService.updateLocation(username, position);
+        }
+      } catch (e) {
+        print("Failed to upload location: $e");
       }
     });
   }
