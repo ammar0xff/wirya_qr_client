@@ -133,26 +133,29 @@ Future<void> onStart(ServiceInstance service) async {
     // Enable wake lock to keep the CPU awake
     WakelockPlus.enable();
 
-    // Start periodic location updates
-    Timer.periodic(Duration(seconds: 1), (timer) async {
-      try {
-        // Fetch the current position
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
+    // Configure location settings for continuous updates
+    final LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation, // High accuracy
+      distanceFilter: 0, // Receive updates even if the device hasn't moved
+    );
 
-        // Get the username from SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        String? username = prefs.getString('username');
+    // Listen to location updates
+    Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+      (Position position) async {
+        try {
+          // Get the username from SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          String? username = prefs.getString('username');
 
-        if (username != null) {
-          // Upload the location
-          await LocationService.updateLocation(username, position);
+          if (username != null) {
+            // Upload the location
+            await LocationService.updateLocation(username, position);
+          }
+        } catch (e) {
+          print("Failed to upload location: $e");
         }
-      } catch (e) {
-        print("Failed to upload location: $e");
-      }
-    });
+      },
+    );
 
     // Stop the service when requested
     service.on('stopService').listen((event) {
