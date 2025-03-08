@@ -12,21 +12,14 @@ import 'package:geolocator/geolocator.dart'; // Import Geolocator package
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
 import 'package:wakelock_plus/wakelock_plus.dart'; // Import Wakelock package
-import 'package:workmanager/workmanager.dart'; // Import WorkManager package
 import 'dart:async'; // Import dart:async for Timer
-
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    // Perform background task (e.g., fetch location and upload to Firebase)
-    return Future.value(true);
-  });
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase
-    await PermissionsHandler.requestPermissions();
+    await requestLocationPermission(); // Request location permission
+    await PermissionsHandler.requestPermissions(); // Request other permissions
     await disableBatteryOptimization(); // Disable battery optimization
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -39,22 +32,24 @@ void main() async {
 
     await initializeService(); // Initialize the background service
 
-    // Initialize WorkManager
-    Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: true,
-    );
-    Workmanager().registerPeriodicTask(
-      "locationTask",
-      "locationTask",
-      frequency: Duration(minutes: 15),
-    );
-
     if (username != null) {
       LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
     }
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
+  }
+}
+
+Future<void> requestLocationPermission() async {
+  // Check if location permission is granted
+  var status = await Permission.location.status;
+  if (status.isDenied) {
+    // Request location permission
+    status = await Permission.location.request();
+    if (status.isPermanentlyDenied) {
+      // If permanently denied, open app settings
+      openAppSettings();
+    }
   }
 }
 
