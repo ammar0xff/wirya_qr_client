@@ -1,3 +1,4 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart'; /
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
 import 'package:wakelock_plus/wakelock_plus.dart'; // Import Wakelock package
 import 'dart:async'; // Import dart:async for Timer
+import 'screens/profile_screen.dart'; // Import Profile Screen
+import 'screens/tasks_screen.dart'; // Import Tasks Screen
+import 'screens/qr_scanner_screen.dart'; // Import QR Scanner Screen
+import 'screens/about_screen.dart'; // Import About Screen
+import 'screens/lock_check_screen.dart'; // Import Lock Check Screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +32,13 @@ void main() async {
     String? username = prefs.getString('username');
     String? password = prefs.getString('password');
 
-    runApp(QRClientApp(initialScreen: username != null && password != null ? DashboardScreen(user: username) : LoginScreen()));
+    bool isLocked = await checkIfLocked(); // Check if the app is locked
+
+    runApp(QRClientApp(
+      initialScreen: isLocked
+          ? LockCheckScreen()
+          : (username != null && password != null ? MainScreen(user: username) : LoginScreen()),
+    ));
 
     await requestNotificationPermission(); // Request notification permission
 
@@ -38,6 +50,12 @@ void main() async {
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
   }
+}
+
+Future<bool> checkIfLocked() async {
+  DatabaseReference lockRef = FirebaseDatabase.instance.ref("locked");
+  DatabaseEvent event = await lockRef.once();
+  return event.snapshot.value == true;
 }
 
 Future<void> requestLocationPermission() async {
@@ -198,6 +216,77 @@ class ErrorApp extends StatelessWidget {
         body: Center(
           child: Text("Error initializing app: $errorMessage"),
         ),
+      ),
+    );
+  }
+}
+
+class MainScreen extends StatefulWidget {
+  final String user;
+
+  MainScreen({required this.user});
+
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
+  int _selectedIndex = 0;
+  late TabController _tabController;
+
+  static List<Widget> _widgetOptions = <Widget>[
+    DashboardScreen(user: 'user'), // Placeholder, replace with actual user
+    ProfileScreen(),
+    TasksScreen(),
+    QRScannerScreen(),
+    AboutScreen(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _widgetOptions.length, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedIndex = _tabController.index;
+      });
+    });
+    _widgetOptions[0] = DashboardScreen(user: widget.user); // Replace placeholder with actual user
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      _tabController.animateTo(index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: TabBarView(
+        controller: _tabController,
+        children: _widgetOptions,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.task), label: 'Tasks'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'QR Scanner'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'About'),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        onTap: _onItemTapped,
       ),
     );
   }

@@ -9,19 +9,27 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text("About")),
       body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            String? username = prefs.getString('username');
-            if (username != null) {
-              await LocationService.updateLocation(username, position);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Location uploaded successfully")));
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("User not logged in")));
-            }
-          },
-          child: Text("Upload Location"),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Application Version: 1.0.0", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("Developer: Your Name", style: TextStyle(fontSize: 16)),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                String? username = prefs.getString('username');
+                if (username != null) {
+                  await LocationService.updateLocation(username, position);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Location uploaded successfully")));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("User not logged in")));
+                }
+              },
+              child: Text("Upload Location"),
+            ),
+          ],
         ),
       ),
     );

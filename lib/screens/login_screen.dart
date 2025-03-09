@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dashboard_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
+import '../main.dart'; // Import MainScreen
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,57 +11,40 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String _errorMessage = '';
+  String errorMessage = "";
 
   Future<void> _login() async {
     String username = _usernameController.text;
     String password = _passwordController.text;
 
-    if (username.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter both username and password.';
-      });
-      return;
-    }
-
-    try {
-      DatabaseReference usersRef = FirebaseDatabase.instance.ref("users");
-      DatabaseEvent event = await usersRef.child(username).once();
-      if (event.snapshot.value != null) {
-        Map<dynamic, dynamic> user = event.snapshot.value as Map<dynamic, dynamic>;
-        if (user["password"] == password) {
-          _saveUserCredentials(username, password);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => DashboardScreen(user: username)),
-          );
-        } else {
-          setState(() {
-            _errorMessage = 'Invalid username or password.';
-          });
-        }
+    DatabaseReference userRef = FirebaseDatabase.instance.ref("users/$username");
+    DatabaseEvent event = await userRef.once();
+    if (event.snapshot.value != null) {
+      Map<String, dynamic> user = Map<String, dynamic>.from(event.snapshot.value as Map);
+      if (user['password'] == password) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', username);
+        await prefs.setString('password', password);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen(user: username)),
+        );
       } else {
         setState(() {
-          _errorMessage = 'Invalid username or password.';
+          errorMessage = "Invalid password.";
         });
       }
-    } catch (e) {
+    } else {
       setState(() {
-        _errorMessage = e.toString();
+        errorMessage = "User not found.";
       });
     }
-  }
-
-  Future<void> _saveUserCredentials(String username, String password) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('username', username);
-    await prefs.setString('password', password);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("تسجيل الدخول")),
+      appBar: AppBar(title: Text("Login")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -69,23 +52,23 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _usernameController,
-              decoration: InputDecoration(labelText: "اسم المستخدم"),
+              decoration: InputDecoration(labelText: "Username"),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: "كلمة المرور"),
+              decoration: InputDecoration(labelText: "Password"),
               obscureText: true,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _login,
-              child: Text("تسجيل الدخول"),
+              child: Text("Login"),
             ),
-            if (_errorMessage.isNotEmpty)
+            if (errorMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  _errorMessage,
+                  errorMessage,
                   style: TextStyle(color: Colors.red),
                 ),
               ),
