@@ -37,6 +37,16 @@ class _TasksScreenState extends State<TasksScreen> {
     _refreshController.refreshCompleted();
   }
 
+  Future<void> _toggleTaskCompletion(String taskId, bool isDone) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username');
+    if (username != null) {
+      DatabaseReference taskRef = FirebaseDatabase.instance.ref("users/$username/tasks/$taskId");
+      await taskRef.update({'done': !isDone});
+      await _fetchTasks();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,11 +63,24 @@ class _TasksScreenState extends State<TasksScreen> {
         controller: _refreshController,
         onRefresh: _onRefresh,
         child: ListView(
+          padding: const EdgeInsets.all(8.0),
           children: tasks.map((task) => Card(
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 4),
             child: ListTile(
-              title: Text(task['name']),
-              subtitle: Text(task['data']),
-              trailing: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank),
+              title: Text(task['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(task['data'], style: TextStyle(fontSize: 14)),
+                  SizedBox(height: 4),
+                  Text("Number: ${task['number']}", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+              trailing: IconButton(
+                icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
+                onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
+              ),
             ),
           )).toList(),
         ),

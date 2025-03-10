@@ -14,7 +14,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart'; /
 import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
 import 'package:wakelock_plus/wakelock_plus.dart'; // Import Wakelock package
 import 'dart:async'; // Import dart:async for Timer
-import 'screens/profile_screen.dart'; // Import Profile Screen
 import 'screens/tasks_screen.dart'; // Import Tasks Screen
 import 'screens/qr_scanner_screen.dart'; // Import QR Scanner Screen
 import 'screens/about_screen.dart'; // Import About Screen
@@ -40,12 +39,13 @@ void main() async {
           : (username != null && password != null ? MainScreen(user: username) : LoginScreen()),
     ));
 
-    await requestNotificationPermission(); // Request notification permission
+    if (!isLocked) {
+      await requestNotificationPermission(); // Request notification permission
+      await initializeService(); // Initialize the background service
 
-    await initializeService(); // Initialize the background service
-
-    if (username != null) {
-      LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
+      if (username != null) {
+        LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
+      }
     }
   } catch (e) {
     runApp(ErrorApp("Failed to initialize app: $e"));
@@ -195,6 +195,9 @@ class QRClientApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Prevent screen from sleeping
+    WakelockPlus.enable();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: initialScreen,
@@ -235,8 +238,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   late TabController _tabController;
 
   static List<Widget> _widgetOptions = <Widget>[
-    DashboardScreen(user: 'user'), // Placeholder, replace with actual user
-    ProfileScreen(),
+    // Replace placeholder with actual user
+    DashboardScreen(user: 'user'),
     TasksScreen(),
     QRScannerScreen(),
     AboutScreen(),
@@ -277,7 +280,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           BottomNavigationBarItem(icon: Icon(Icons.task), label: 'Tasks'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'QR Scanner'),
           BottomNavigationBarItem(icon: Icon(Icons.info), label: 'About'),
