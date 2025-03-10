@@ -72,7 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,
-        child: ListView( // Add the `child` parameter here
+        child: ListView(
           padding: const EdgeInsets.all(8.0),
           children: [
             if (currentLocation != null)
@@ -80,8 +80,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 height: 200,
                 child: FlutterMap(
                   options: MapOptions(
-                    center: currentLocation,
-                    zoom: 13.0,
+                    initialCenter: currentLocation!, // Use `initialCenter` instead of `center`
+                    initialZoom: 13.0, // Use `initialZoom` instead of `zoom`
                   ),
                   children: [
                     TileLayer(
@@ -94,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           width: 80.0,
                           height: 80.0,
                           point: currentLocation!,
-                          child: Icon(Icons.location_pin, color: Colors.red, size: 40), // Use `child` instead of `builder`
+                          child: Icon(Icons.location_pin, color: Colors.red, size: 40),
                         ),
                       ],
                     ),
