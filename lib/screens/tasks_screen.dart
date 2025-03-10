@@ -41,7 +41,7 @@ class _TasksScreenState extends State<TasksScreen> {
           setState(() {
             tasks = rawTasks.entries.map((entry) {
               final task = Map<String, dynamic>.from(entry.value);
-              task['id'] = entry.key;
+              task['id'] = entry.key; // Add the task ID to the task map
               return task;
             }).toList();
           });
@@ -71,7 +71,14 @@ class _TasksScreenState extends State<TasksScreen> {
       if (username != null) {
         final taskRef = FirebaseDatabase.instance.ref("users/$username/tasks/$taskId");
         await taskRef.update({'done': !isDone});
-        await _fetchTasks();
+
+        // Update the local state to reflect the change
+        setState(() {
+          final taskIndex = tasks.indexWhere((task) => task['id'] == taskId);
+          if (taskIndex != -1) {
+            tasks[taskIndex]['done'] = !isDone;
+          }
+        });
       }
     } catch (e) {
       setState(() {
@@ -136,7 +143,9 @@ class _TasksScreenState extends State<TasksScreen> {
         trailing: Checkbox(
           value: task['done'],
           onChanged: (bool? value) {
-            _toggleTaskCompletion(task['id'], task['done']);
+            if (value != null) {
+              _toggleTaskCompletion(task['id'], task['done']);
+            }
           },
         ),
       ),
