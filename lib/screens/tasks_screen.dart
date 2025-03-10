@@ -37,13 +37,9 @@ class _TasksScreenState extends State<TasksScreen> {
         final event = await tasksRef.once();
 
         if (event.snapshot.value != null) {
-          final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
-          final tasksMap = rawTasks.map((key, value) {
-            return MapEntry(key.toString(), value as Map<String, dynamic>);
-          });
-
+          final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
           setState(() {
-            tasks = tasksMap.values.toList();
+            tasks = rawTasks.values.cast<Map<String, dynamic>>().toList();
           });
         }
       }

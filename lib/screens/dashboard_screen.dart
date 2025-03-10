@@ -53,14 +53,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final event = await tasksRef.once();
 
       if (event.snapshot.value != null) {
-        final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
-        final tasks = rawTasks.map((key, value) {
-          return MapEntry(key.toString(), value as Map<String, dynamic>);
-        });
-
+        final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
         setState(() {
-          undoneTasks = tasks.values.where((task) => task['done'] == false).toList();
-          doneTasks = tasks.values.where((task) => task['done'] == true).toList();
+          undoneTasks = rawTasks.values.where((task) => task['done'] == false).cast<Map<String, dynamic>>().toList();
+          doneTasks = rawTasks.values.where((task) => task['done'] == true).cast<Map<String, dynamic>>().toList();
         });
       }
     } catch (e) {
@@ -74,14 +70,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final event = await locationRef.once();
 
       if (event.snapshot.value != null) {
-        final rawLocation = event.snapshot.value as Map<dynamic, dynamic>;
-        final location = rawLocation.map((key, value) => MapEntry(key.toString(), value));
-
+        final location = Map<String, dynamic>.from(event.snapshot.value as Map);
         setState(() {
-          currentLocation = LatLng(
-            double.parse(location['latitude'].toString()),
-            double.parse(location['longitude'].toString()),
-          );
+          currentLocation = LatLng(location['latitude'], location['longitude']);
         });
       }
     } catch (e) {
@@ -160,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: 80.0,
                 height: 80.0,
                 point: currentLocation!,
-                child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                child: const  Icon(Icons.location_pin, color: Colors.red, size: 40),
               ),
             ],
           ),
