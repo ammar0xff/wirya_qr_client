@@ -48,31 +48,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchTasks() async {
-    DatabaseReference tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
-    DatabaseEvent event = await tasksRef.once();
-    if (event.snapshot.value != null) {
-      Map<String, dynamic> tasks = Map<String, dynamic>.from(event.snapshot.value as Map);
-      setState(() {
-        undoneTasks = tasks.entries
-            .where((entry) => entry.value['done'] == false)
-            .map((entry) => entry.value as Map<String, dynamic>)
-            .toList();
-        doneTasks = tasks.entries
-            .where((entry) => entry.value['done'] == true)
-            .map((entry) => entry.value as Map<String, dynamic>)
-            .toList();
-      });
+    try {
+      DatabaseReference tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
+      DatabaseEvent event = await tasksRef.once();
+      if (event.snapshot.value != null) {
+        // Convert Firebase data to Map<String, dynamic>
+        Map<dynamic, dynamic> rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
+        Map<String, dynamic> tasks = Map<String, dynamic>.from(rawTasks);
+
+        setState(() {
+          undoneTasks = tasks.entries
+              .where((entry) => entry.value['done'] == false)
+              .map((entry) => entry.value as Map<String, dynamic>)
+              .toList();
+          doneTasks = tasks.entries
+              .where((entry) => entry.value['done'] == true)
+              .map((entry) => entry.value as Map<String, dynamic>)
+              .toList();
+        });
+      }
+    } catch (e) {
+      throw Exception("Failed to fetch tasks: $e");
     }
   }
 
   Future<void> _fetchCurrentLocation() async {
-    DatabaseReference locationRef = FirebaseDatabase.instance.ref("users/${widget.user}/current_location");
-    DatabaseEvent event = await locationRef.once();
-    if (event.snapshot.value != null) {
-      Map<String, dynamic> location = Map<String, dynamic>.from(event.snapshot.value as Map);
-      setState(() {
-        currentLocation = LatLng(location['latitude'], location['longitude']);
-      });
+    try {
+      DatabaseReference locationRef = FirebaseDatabase.instance.ref("users/${widget.user}/current_location");
+      DatabaseEvent event = await locationRef.once();
+      if (event.snapshot.value != null) {
+        // Convert Firebase data to Map<String, dynamic>
+        Map<dynamic, dynamic> rawLocation = event.snapshot.value as Map<dynamic, dynamic>;
+        Map<String, dynamic> location = Map<String, dynamic>.from(rawLocation);
+
+        setState(() {
+          currentLocation = LatLng(location['latitude'], location['longitude']);
+        });
+      }
+    } catch (e) {
+      throw Exception("Failed to fetch location: $e");
     }
   }
 

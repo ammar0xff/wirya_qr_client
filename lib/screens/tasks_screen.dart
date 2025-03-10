@@ -33,8 +33,14 @@ class _TasksScreenState extends State<TasksScreen> {
         DatabaseReference tasksRef = FirebaseDatabase.instance.ref("users/$username/tasks");
         DatabaseEvent event = await tasksRef.once();
         if (event.snapshot.value != null) {
+          // Convert the data to a Map<String, dynamic>
+          Map<dynamic, dynamic> rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
+          Map<String, dynamic> tasksMap = Map<String, dynamic>.from(rawTasks);
+
           setState(() {
-            tasks = (Map<String, dynamic>.from(event.snapshot.value as Map).values.toList()).cast<Map<String, dynamic>>();
+            tasks = tasksMap.entries
+                .map((entry) => entry.value as Map<String, dynamic>)
+                .toList();
           });
         }
       }
@@ -80,32 +86,34 @@ class _TasksScreenState extends State<TasksScreen> {
           ? Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
               ? Center(child: Text(errorMessage, style: TextStyle(color: Colors.red)))
-              : SmartRefresher(
-                  controller: _refreshController,
-                  onRefresh: _onRefresh,
-                  child: ListView(
-                    padding: const EdgeInsets.all(8.0),
-                    children: tasks.map((task) => Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
-                        title: Text(task['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(task['data'], style: TextStyle(fontSize: 14)),
-                            SizedBox(height: 4),
-                            Text("Number: ${task['number']}", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
-                          onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
-                        ),
+              : tasks.isEmpty
+                  ? Center(child: Text("No tasks found", style: TextStyle(fontSize: 16)))
+                  : SmartRefresher(
+                      controller: _refreshController,
+                      onRefresh: _onRefresh,
+                      child: ListView(
+                        padding: const EdgeInsets.all(8.0),
+                        children: tasks.map((task) => Card(
+                          elevation: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            title: Text(task['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(task['data'], style: TextStyle(fontSize: 14)),
+                                SizedBox(height: 4),
+                                Text("Number: ${task['number']}", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
+                              onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
+                            ),
+                          ),
+                        )).toList(),
                       ),
-                    )).toList(),
-                  ),
-                ),
+                    ),
     );
   }
 }
