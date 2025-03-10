@@ -33,7 +33,7 @@ class _TasksScreenState extends State<TasksScreen> {
         DatabaseReference tasksRef = FirebaseDatabase.instance.ref("users/$username/tasks");
         DatabaseEvent event = await tasksRef.once();
         if (event.snapshot.value != null) {
-          // Convert the data to a Map<String, dynamic>
+          // Convert Firebase data to Map<String, dynamic>
           Map<dynamic, dynamic> rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
           Map<String, dynamic> tasksMap = Map<String, dynamic>.from(rawTasks);
 

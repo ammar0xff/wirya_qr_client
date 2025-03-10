@@ -82,7 +82,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Map<String, dynamic> location = Map<String, dynamic>.from(rawLocation);
 
         setState(() {
-          currentLocation = LatLng(location['latitude'], location['longitude']);
+          currentLocation = LatLng(
+            double.parse(location['latitude'].toString()),
+            double.parse(location['longitude'].toString()),
+          );
         });
       }
     } catch (e) {
