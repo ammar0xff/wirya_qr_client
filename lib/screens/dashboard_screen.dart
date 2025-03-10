@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart'; // Import the Firebase Database package
-import 'package:pull_to_refresh/pull_to_refresh.dart'; // Import pull_to_refresh package
-import 'package:flutter_map/flutter_map.dart'; // Import flutter_map package
-import 'package:latlong2/latlong.dart'; // Import latlong2 package
+import 'package:firebase_database/firebase_database.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String user;
@@ -24,8 +24,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchTasks();
-    _fetchCurrentLocation();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = "";
+    });
+
+    try {
+      await _fetchTasks();
+      await _fetchCurrentLocation();
+    } catch (e) {
+      setState(() {
+        errorMessage = "Failed to fetch data: $e";
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchTasks() async {
@@ -34,8 +53,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (event.snapshot.value != null) {
       Map<String, dynamic> tasks = Map<String, dynamic>.from(event.snapshot.value as Map);
       setState(() {
-        undoneTasks = tasks.entries.where((entry) => !entry.value['done']).map((entry) => entry.value as Map<String, dynamic>).toList();
-        doneTasks = tasks.entries.where((entry) => entry.value['done']).map((entry) => entry.value as Map<String, dynamic>).toList();
+        undoneTasks = tasks.entries
+            .where((entry) => entry.value['done'] == false)
+            .map((entry) => entry.value as Map<String, dynamic>)
+            .toList();
+        doneTasks = tasks.entries
+            .where((entry) => entry.value['done'] == true)
+            .map((entry) => entry.value as Map<String, dynamic>)
+            .toList();
       });
     }
   }
@@ -52,8 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onRefresh() async {
-    await _fetchTasks();
-    await _fetchCurrentLocation();
+    await _fetchData();
     _refreshController.refreshCompleted();
   }
 
@@ -69,44 +93,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        child: ListView(
-          padding: const EdgeInsets.all(8.0),
-          children: [
-            if (currentLocation != null)
-              Container(
-                height: 200,
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: currentLocation!, // Use `initialCenter` instead of `center`
-                    initialZoom: 13.0, // Use `initialZoom` instead of `zoom`
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                      subdomains: ['a', 'b', 'c'],
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          width: 80.0,
-                          height: 80.0,
-                          point: currentLocation!,
-                          child: Icon(Icons.location_pin, color: Colors.red, size: 40),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : errorMessage.isNotEmpty
+              ? Center(child: Text(errorMessage, style: TextStyle(color: Colors.red)))
+              : SmartRefresher(
+                  controller: _refreshController,
+                  onRefresh: _onRefresh,
+                  child: ListView(
+                    padding: const EdgeInsets.all(8.0),
+                    children: [
+                      if (currentLocation != null)
+                        Container(
+                          height: 200,
+                          child: FlutterMap(
+                            options: MapOptions(
+                              initialCenter: currentLocation!,
+                              initialZoom: 13.0,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                subdomains: ['a', 'b', 'c'],
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    width: 80.0,
+                                    height: 80.0,
+                                    point: currentLocation!,
+                                    child: Icon(Icons.location_pin, color: Colors.red, size: 40),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
+                      _buildTaskSection("Undone Tasks", undoneTasks, Icons.check_box_outline_blank),
+                      _buildTaskSection("Done Tasks", doneTasks, Icons.check_box),
+                      _buildSummarySection(),
+                    ],
+                  ),
                 ),
-              ),
-            _buildTaskSection("Undone Tasks", undoneTasks, Icons.check_box_outline_blank),
-            _buildTaskSection("Done Tasks", doneTasks, Icons.check_box),
-            _buildSummarySection(),
-          ],
-        ),
-      ),
     );
   }
 
