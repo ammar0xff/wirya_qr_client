@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String user;
@@ -15,21 +17,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
   List<Map<String, dynamic>> undoneTasks = [];
   List<Map<String, dynamic>> doneTasks = [];
+  LatLng? currentLocation;
   bool isLoading = false;
   String errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchTasks();
+    _fetchData();
   }
 
-  Future<void> _fetchTasks() async {
+  Future<void> _fetchData() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
+    try {
+      await _fetchTasks();
+      await _fetchCurrentLocation();
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to fetch data: $e';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchTasks() async {
     try {
       final tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
       final event = await tasksRef.once();
@@ -46,18 +64,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to fetch tasks: $e';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+      throw Exception('Failed to fetch tasks: $e');
+    }
+  }
+
+  Future<void> _fetchCurrentLocation() async {
+    try {
+      final locationRef = FirebaseDatabase.instance.ref("users/${widget.user}/current_location");
+      final event = await locationRef.once();
+
+      if (event.snapshot.value != null) {
+        final rawLocation = event.snapshot.value as Map<dynamic, dynamic>;
+        final location = rawLocation.map((key, value) => MapEntry(key.toString(), value));
+
+        setState(() {
+          currentLocation = LatLng(
+            double.parse(location['latitude'].toString()),
+            double.parse(location['longitude'].toString()),
+          );
+        });
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch location: $e');
     }
   }
 
   void _onRefresh() async {
-    await _fetchTasks();
+    await _fetchData();
     _refreshController.refreshCompleted();
   }
 
@@ -90,75 +123,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
       controller: _refreshController,
       onRefresh: _onRefresh,
       child: ListView(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
         children: [
+          if (currentLocation != null) _buildMap(),
+          const SizedBox(height: 16),
           _buildTaskSection('Undone Tasks', undoneTasks, Icons.check_box_outline_blank),
+          const SizedBox(height: 16),
           _buildTaskSection('Done Tasks', doneTasks, Icons.check_box),
+          const SizedBox(height: 16),
           _buildSummarySection(),
         ],
       ),
     );
   }
 
-  Widget _buildTaskSection(String title, List<Map<String, dynamic>> tasks, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildMap() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[200],
+      ),
+      child: FlutterMap(
+        options: MapOptions(
+          initialCenter: currentLocation!,
+          initialZoom: 13.0,
+        ),
         children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ...tasks.map((task) => Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: ListTile(
-              title: Text(task['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(task['data'], style: const TextStyle(fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text('Number: ${task['number']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
+          TileLayer(
+            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            subdomains: const ['a', 'b', 'c'],
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                width: 80.0,
+                height: 80.0,
+                point: currentLocation!,
+                child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
               ),
-              trailing: Icon(icon, color: Colors.blue),
-            ),
-          )),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildTaskSection(String title, List<Map<String, dynamic>> tasks, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...tasks.map((task) => Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: ListTile(
+            title: Text(task['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task['data'], style: const TextStyle(fontSize: 14)),
+                const SizedBox(height: 4),
+                Text('Number: ${task['number']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+            trailing: Icon(icon, color: Colors.blue),
+          ),
+        )),
+      ],
+    );
+  }
+
   Widget _buildSummarySection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _buildSummaryItem('Total Tasks', undoneTasks.length + doneTasks.length),
+            _buildSummaryItem('Undone Tasks', undoneTasks.length),
+            _buildSummaryItem('Done Tasks', doneTasks.length),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String title, int count) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: ListTile(
-              title: const Text('Total Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              trailing: Text('${undoneTasks.length + doneTasks.length}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: ListTile(
-              title: const Text('Undone Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              trailing: Text('${undoneTasks.length}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: ListTile(
-              title: const Text('Done Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              trailing: Text('${doneTasks.length}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          Text(title, style: const TextStyle(fontSize: 16)),
+          Text('$count', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );

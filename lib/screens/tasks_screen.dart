@@ -113,7 +113,7 @@ class _TasksScreenState extends State<TasksScreen> {
       controller: _refreshController,
       onRefresh: _onRefresh,
       child: ListView(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
         children: tasks.map((task) => _buildTaskCard(task)).toList(),
       ),
     );
@@ -121,8 +121,8 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Widget _buildTaskCard(Map<String, dynamic> task) {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         title: Text(task['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         subtitle: Column(
@@ -134,7 +134,10 @@ class _TasksScreenState extends State<TasksScreen> {
           ],
         ),
         trailing: IconButton(
-          icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
+          icon: Icon(
+            task['done'] ? Icons.check_box : Icons.check_box_outline_blank,
+            color: task['done'] ? Colors.green : Colors.blue,
+          ),
           onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
         ),
       ),
