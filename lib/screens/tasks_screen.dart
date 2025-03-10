@@ -39,7 +39,11 @@ class _TasksScreenState extends State<TasksScreen> {
         if (event.snapshot.value != null) {
           final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
           setState(() {
-            tasks = rawTasks.values.map((task) => Map<String, dynamic>.from(task)).toList();
+            tasks = rawTasks.entries.map((entry) {
+              final task = Map<String, dynamic>.from(entry.value);
+              task['id'] = entry.key;
+              return task;
+            }).toList();
           });
         }
       }
@@ -129,12 +133,11 @@ class _TasksScreenState extends State<TasksScreen> {
             Text('Number: ${task['number']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
-        trailing: IconButton(
-          icon: Icon(
-            task['done'] ? Icons.check_box : Icons.check_box_outline_blank,
-            color: task['done'] ? Colors.green : Colors.blue,
-          ),
-          onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
+        trailing: Checkbox(
+          value: task['done'],
+          onChanged: (bool? value) {
+            _toggleTaskCompletion(task['id'], task['done']);
+          },
         ),
       ),
     );

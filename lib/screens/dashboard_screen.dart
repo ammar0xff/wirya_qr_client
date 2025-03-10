@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String user;
@@ -49,15 +50,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchTasks() async {
     try {
-      final tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
-      final event = await tasksRef.once();
+      final prefs = await SharedPreferences.getInstance();
+      final username = prefs.getString('username');
 
-      if (event.snapshot.value != null) {
-        final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
-        setState(() {
-          undoneTasks = rawTasks.values.where((task) => task['done'] == false).map((task) => Map<String, dynamic>.from(task)).toList();
-          doneTasks = rawTasks.values.where((task) => task['done'] == true).map((task) => Map<String, dynamic>.from(task)).toList();
-        });
+      if (username != null) {
+        final tasksRef = FirebaseDatabase.instance.ref("users/$username/tasks");
+        final event = await tasksRef.once();
+
+        if (event.snapshot.value != null) {
+          final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
+          setState(() {
+            undoneTasks = rawTasks.values.where((task) => task['done'] == false).map((task) => Map<String, dynamic>.from(task)).toList();
+            doneTasks = rawTasks.values.where((task) => task['done'] == true).map((task) => Map<String, dynamic>.from(task)).toList();
+          });
+        }
       }
     } catch (e) {
       throw Exception('Failed to fetch tasks: $e');
@@ -66,14 +72,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchCurrentLocation() async {
     try {
-      final locationRef = FirebaseDatabase.instance.ref("users/${widget.user}/current_location");
-      final event = await locationRef.once();
+      final prefs = await SharedPreferences.getInstance();
+      final username = prefs.getString('username');
 
-      if (event.snapshot.value != null) {
-        final location = Map<String, dynamic>.from(event.snapshot.value as Map);
-        setState(() {
-          currentLocation = LatLng(location['latitude'], location['longitude']);
-        });
+      if (username != null) {
+        final locationRef = FirebaseDatabase.instance.ref("users/$username/current_location");
+        final event = await locationRef.once();
+
+        if (event.snapshot.value != null) {
+          final location = Map<String, dynamic>.from(event.snapshot.value as Map);
+          setState(() {
+            currentLocation = LatLng(location['latitude'], location['longitude']);
+          });
+        }
       }
     } catch (e) {
       throw Exception('Failed to fetch location: $e');
