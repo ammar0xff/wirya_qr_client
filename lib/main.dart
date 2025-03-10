@@ -1,93 +1,104 @@
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'firebase_options.dart'; // Import Firebase options
-import 'screens/dashboard_screen.dart'; // Import Dashboard Screen
-import 'screens/login_screen.dart'; // Import Login Screen
-import 'utils/permissions_handler.dart'; // Import Permissions Handler
-import 'utils/location_service.dart'; // Import Location Service
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart'; // Import AndroidServiceInstance
-import 'package:geolocator/geolocator.dart'; // Import Geolocator package
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import Flutter Local Notifications
-import 'package:permission_handler/permission_handler.dart'; // Import Permission Handler
-import 'package:wakelock_plus/wakelock_plus.dart'; // Import Wakelock package
-import 'dart:async'; // Import dart:async for Timer
-import 'screens/tasks_screen.dart'; // Import Tasks Screen
-import 'screens/qr_scanner_screen.dart'; // Import QR Scanner Screen
-import 'screens/about_screen.dart'; // Import About Screen
-import 'screens/lock_check_screen.dart'; // Import Lock Check Screen
+import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:async';
+
+import 'firebase_options.dart'; // Firebase configuration
+import 'screens/dashboard_screen.dart'; // Dashboard Screen
+import 'screens/login_screen.dart'; // Login Screen
+import 'screens/tasks_screen.dart'; // Tasks Screen
+import 'screens/qr_scanner_screen.dart'; // QR Scanner Screen
+import 'screens/about_screen.dart'; // About Screen
+import 'screens/lock_check_screen.dart'; // Lock Check Screen
+import 'utils/permissions_handler.dart'; // Permissions Handler
+import 'utils/location_service.dart'; // Location Service
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase
-    await requestLocationPermission(); // Request location permission
-    await PermissionsHandler.requestPermissions(); // Request other permissions
-    await disableBatteryOptimization(); // Disable battery optimization
+    // Initialize Firebase
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? username = prefs.getString('username');
-    String? password = prefs.getString('password');
+    // Request necessary permissions
+    await requestLocationPermission();
+    await PermissionsHandler.requestPermissions();
+    await disableBatteryOptimization();
 
-    bool isLocked = await checkIfLocked(); // Check if the app is locked
+    // Check if the app is locked
+    final bool isLocked = await checkIfLocked();
 
-    runApp(QRClientApp(
-      initialScreen: isLocked
-          ? LockCheckScreen()
-          : (username != null && password != null ? MainScreen(user: username) : LoginScreen()),
-    ));
+    // Get stored user credentials
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? username = prefs.getString('username');
+    final String? password = prefs.getString('password');
 
+    // Determine the initial screen based on app state
+    final Widget initialScreen = isLocked
+        ? LockCheckScreen()
+        : (username != null && password != null ? MainScreen(user: username) : LoginScreen());
+
+    // Run the app
+    runApp(QRClientApp(initialScreen: initialScreen));
+
+    // Initialize background services if the app is not locked
     if (!isLocked) {
-      await requestNotificationPermission(); // Request notification permission
-      await initializeService(); // Initialize the background service
+      await requestNotificationPermission();
+      await initializeService();
 
       if (username != null) {
-        LocationService.startPeriodicLocationUpdates(username); // Start periodic location updates
+        LocationService.startPeriodicLocationUpdates(username);
       }
     }
   } catch (e) {
+    // Handle initialization errors
     runApp(ErrorApp("Failed to initialize app: $e"));
   }
 }
 
+/// Check if the app is locked by querying Firebase
 Future<bool> checkIfLocked() async {
-  DatabaseReference lockRef = FirebaseDatabase.instance.ref("locked");
-  DatabaseEvent event = await lockRef.once();
+  final DatabaseReference lockRef = FirebaseDatabase.instance.ref("locked");
+  final DatabaseEvent event = await lockRef.once();
   return event.snapshot.value == true;
 }
 
+/// Request location permission
 Future<void> requestLocationPermission() async {
-  // Check if location permission is granted
   var status = await Permission.location.status;
   if (status.isDenied) {
-    // Request location permission
     status = await Permission.location.request();
     if (status.isPermanentlyDenied) {
-      // If permanently denied, open app settings
       openAppSettings();
     }
   }
 }
 
+/// Request notification permission
 Future<void> requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
   }
 }
 
+/// Disable battery optimization
 Future<void> disableBatteryOptimization() async {
   if (await Permission.ignoreBatteryOptimizations.isDenied) {
     await Permission.ignoreBatteryOptimizations.request();
   }
 }
 
+/// Initialize the background service
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'my_foreground', // id
@@ -97,13 +108,12 @@ Future<void> initializeService() async {
   );
 
   await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(channel);
 
-  var initializationSettingsAndroid =
-      const AndroidInitializationSettings('@mipmap/ic_launcher');
-  var initializationSettings =
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings =
       InitializationSettings(android: initializationSettingsAndroid);
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
@@ -127,10 +137,10 @@ Future<void> initializeService() async {
   await service.startService();
 }
 
+/// Background service start handler
 Future<void> onStart(ServiceInstance service) async {
   if (service is AndroidServiceInstance) {
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
+    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'my_foreground', // id
@@ -152,7 +162,7 @@ Future<void> onStart(ServiceInstance service) async {
     WakelockPlus.enable();
 
     // Configure location settings for continuous updates
-    final LocationSettings locationSettings = LocationSettings(
+    const LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation, // High accuracy
       distanceFilter: 0, // Receive updates even if the device hasn't moved
     );
@@ -161,12 +171,10 @@ Future<void> onStart(ServiceInstance service) async {
     Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) async {
         try {
-          // Get the username from SharedPreferences
           final prefs = await SharedPreferences.getInstance();
-          String? username = prefs.getString('username');
+          final String? username = prefs.getString('username');
 
           if (username != null) {
-            // Upload the location
             await LocationService.updateLocation(username, position);
           }
         } catch (e) {
@@ -183,15 +191,17 @@ Future<void> onStart(ServiceInstance service) async {
   }
 }
 
+/// iOS background service handler
 Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   return true;
 }
 
+/// Main app widget
 class QRClientApp extends StatelessWidget {
   final Widget initialScreen;
 
-  QRClientApp({required this.initialScreen});
+  const QRClientApp({Key? key, required this.initialScreen}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -205,17 +215,18 @@ class QRClientApp extends StatelessWidget {
   }
 }
 
+/// Error app widget
 class ErrorApp extends StatelessWidget {
   final String errorMessage;
 
-  ErrorApp(this.errorMessage);
+  const ErrorApp(this.errorMessage, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: Text("Error")),
+        appBar: AppBar(title: const Text("Error")),
         body: Center(
           child: Text("Error initializing app: $errorMessage"),
         ),
@@ -224,10 +235,11 @@ class ErrorApp extends StatelessWidget {
   }
 }
 
+/// Main screen with bottom navigation
 class MainScreen extends StatefulWidget {
   final String user;
 
-  MainScreen({required this.user});
+  const MainScreen({Key? key, required this.user}) : super(key: key);
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -236,14 +248,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late TabController _tabController;
-
-  static List<Widget> _widgetOptions = <Widget>[
-    // Replace placeholder with actual user
-    DashboardScreen(user: 'user'),
-    TasksScreen(),
-    QRScannerScreen(),
-    AboutScreen(),
-  ];
 
   @override
   void initState() {
@@ -254,8 +258,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         _selectedIndex = _tabController.index;
       });
     });
-    _widgetOptions[0] = DashboardScreen(user: widget.user); // Replace placeholder with actual user
   }
+
+  static final List<Widget> _widgetOptions = <Widget>[
+    DashboardScreen(user: 'user'), // Replace with actual user
+    const TasksScreen(),
+    QRScannerScreen(),
+    AboutScreen(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {

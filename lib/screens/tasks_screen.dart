@@ -4,6 +4,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TasksScreen extends StatefulWidget {
+  const TasksScreen({Key? key}) : super(key: key);
+
   @override
   _TasksScreenState createState() => _TasksScreenState();
 }
@@ -12,7 +14,7 @@ class _TasksScreenState extends State<TasksScreen> {
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
   List<Map<String, dynamic>> tasks = [];
   bool isLoading = false;
-  String errorMessage = "";
+  String errorMessage = '';
 
   @override
   void initState() {
@@ -23,30 +25,29 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _fetchTasks() async {
     setState(() {
       isLoading = true;
-      errorMessage = "";
+      errorMessage = '';
     });
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? username = prefs.getString('username');
+      final prefs = await SharedPreferences.getInstance();
+      final username = prefs.getString('username');
+
       if (username != null) {
-        DatabaseReference tasksRef = FirebaseDatabase.instance.ref("users/$username/tasks");
-        DatabaseEvent event = await tasksRef.once();
+        final tasksRef = FirebaseDatabase.instance.ref("users/$username/tasks");
+        final event = await tasksRef.once();
+
         if (event.snapshot.value != null) {
-          // Convert Firebase data to Map<String, dynamic>
-          Map<dynamic, dynamic> rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
-          Map<String, dynamic> tasksMap = Map<String, dynamic>.from(rawTasks);
+          final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
+          final tasksMap = rawTasks.map((key, value) => MapEntry(key.toString(), value as Map<String, dynamic>));
 
           setState(() {
-            tasks = tasksMap.entries
-                .map((entry) => entry.value as Map<String, dynamic>)
-                .toList();
+            tasks = tasksMap.values.toList();
           });
         }
       }
     } catch (e) {
       setState(() {
-        errorMessage = "Failed to fetch tasks: $e";
+        errorMessage = 'Failed to fetch tasks: $e';
       });
     } finally {
       setState(() {
@@ -61,12 +62,19 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   Future<void> _toggleTaskCompletion(String taskId, bool isDone) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? username = prefs.getString('username');
-    if (username != null) {
-      DatabaseReference taskRef = FirebaseDatabase.instance.ref("users/$username/tasks/$taskId");
-      await taskRef.update({'done': !isDone});
-      await _fetchTasks();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final username = prefs.getString('username');
+
+      if (username != null) {
+        final taskRef = FirebaseDatabase.instance.ref("users/$username/tasks/$taskId");
+        await taskRef.update({'done': !isDone});
+        await _fetchTasks();
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to toggle task: $e';
+      });
     }
   }
 
@@ -74,46 +82,60 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Tasks"),
+        title: const Text('Tasks'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _onRefresh,
           ),
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : errorMessage.isNotEmpty
-              ? Center(child: Text(errorMessage, style: TextStyle(color: Colors.red)))
-              : tasks.isEmpty
-                  ? Center(child: Text("No tasks found", style: TextStyle(fontSize: 16)))
-                  : SmartRefresher(
-                      controller: _refreshController,
-                      onRefresh: _onRefresh,
-                      child: ListView(
-                        padding: const EdgeInsets.all(8.0),
-                        children: tasks.map((task) => Card(
-                          elevation: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: ListTile(
-                            title: Text(task['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(task['data'], style: TextStyle(fontSize: 14)),
-                                SizedBox(height: 4),
-                                Text("Number: ${task['number']}", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
-                              onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
-                            ),
-                          ),
-                        )).toList(),
-                      ),
-                    ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (errorMessage.isNotEmpty) {
+      return Center(child: Text(errorMessage, style: const TextStyle(color: Colors.red)));
+    }
+
+    if (tasks.isEmpty) {
+      return const Center(child: Text('No tasks found', style: TextStyle(fontSize: 16)));
+    }
+
+    return SmartRefresher(
+      controller: _refreshController,
+      onRefresh: _onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.all(8.0),
+        children: tasks.map((task) => _buildTaskCard(task)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(Map<String, dynamic> task) {
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        title: Text(task['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(task['data'], style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Number: ${task['number']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        trailing: IconButton(
+          icon: Icon(task['done'] ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.blue),
+          onPressed: () => _toggleTaskCompletion(task['id'], task['done']),
+        ),
+      ),
     );
   }
 }
