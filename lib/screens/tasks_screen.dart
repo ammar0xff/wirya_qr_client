@@ -39,7 +39,7 @@ class _TasksScreenState extends State<TasksScreen> {
         if (event.snapshot.value != null) {
           final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
           setState(() {
-            tasks = rawTasks.values.cast<Map<String, dynamic>>().toList();
+            tasks = rawTasks.values.map((task) => Map<String, dynamic>.from(task)).toList();
           });
         }
       }

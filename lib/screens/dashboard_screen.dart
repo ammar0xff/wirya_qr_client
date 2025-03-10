@@ -55,8 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (event.snapshot.value != null) {
         final rawTasks = Map<String, dynamic>.from(event.snapshot.value as Map);
         setState(() {
-          undoneTasks = rawTasks.values.where((task) => task['done'] == false).cast<Map<String, dynamic>>().toList();
-          doneTasks = rawTasks.values.where((task) => task['done'] == true).cast<Map<String, dynamic>>().toList();
+          undoneTasks = rawTasks.values.where((task) => task['done'] == false).map((task) => Map<String, dynamic>.from(task)).toList();
+          doneTasks = rawTasks.values.where((task) => task['done'] == true).map((task) => Map<String, dynamic>.from(task)).toList();
         });
       }
     } catch (e) {
@@ -151,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: 80.0,
                 height: 80.0,
                 point: currentLocation!,
-                child: const  Icon(Icons.location_pin, color: Colors.red, size: 40),
+                child: Icon(Icons.location_pin, color: Colors.red, size: 40),
               ),
             ],
           ),
