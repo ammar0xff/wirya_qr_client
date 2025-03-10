@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -38,7 +38,9 @@ class _TasksScreenState extends State<TasksScreen> {
 
         if (event.snapshot.value != null) {
           final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
-          final tasksMap = rawTasks.map((key, value) => MapEntry(key.toString(), value as Map<String, dynamic>));
+          final tasksMap = rawTasks.map((key, value) {
+            return MapEntry(key.toString(), value as Map<String, dynamic>);
+          });
 
           setState(() {
             tasks = tasksMap.values.toList();

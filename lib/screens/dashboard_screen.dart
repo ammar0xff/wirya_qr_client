@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String user;
@@ -17,28 +15,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
   List<Map<String, dynamic>> undoneTasks = [];
   List<Map<String, dynamic>> doneTasks = [];
-  LatLng? currentLocation;
   bool isLoading = false;
   String errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchTasks();
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchTasks() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
     try {
-      await _fetchTasks();
-      await _fetchCurrentLocation();
+      final tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
+      final event = await tasksRef.once();
+
+      if (event.snapshot.value != null) {
+        final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
+        final tasks = rawTasks.map((key, value) {
+          return MapEntry(key.toString(), value as Map<String, dynamic>);
+        });
+
+        setState(() {
+          undoneTasks = tasks.values.where((task) => task['done'] == false).toList();
+          doneTasks = tasks.values.where((task) => task['done'] == true).toList();
+        });
+      }
     } catch (e) {
       setState(() {
-        errorMessage = 'Failed to fetch data: $e';
+        errorMessage = 'Failed to fetch tasks: $e';
       });
     } finally {
       setState(() {
@@ -47,48 +56,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _fetchTasks() async {
-    try {
-      final tasksRef = FirebaseDatabase.instance.ref("users/${widget.user}/tasks");
-      final event = await tasksRef.once();
-
-      if (event.snapshot.value != null) {
-        final rawTasks = event.snapshot.value as Map<dynamic, dynamic>;
-        final tasks = rawTasks.map((key, value) => MapEntry(key.toString(), value as Map<String, dynamic>));
-
-        setState(() {
-          undoneTasks = tasks.values.where((task) => task['done'] == false).toList();
-          doneTasks = tasks.values.where((task) => task['done'] == true).toList();
-        });
-      }
-    } catch (e) {
-      throw Exception('Failed to fetch tasks: $e');
-    }
-  }
-
-  Future<void> _fetchCurrentLocation() async {
-    try {
-      final locationRef = FirebaseDatabase.instance.ref("users/${widget.user}/current_location");
-      final event = await locationRef.once();
-
-      if (event.snapshot.value != null) {
-        final rawLocation = event.snapshot.value as Map<dynamic, dynamic>;
-        final location = rawLocation.map((key, value) => MapEntry(key.toString(), value));
-
-        setState(() {
-          currentLocation = LatLng(
-            double.parse(location['latitude'].toString()),
-            double.parse(location['longitude'].toString()),
-          );
-        });
-      }
-    } catch (e) {
-      throw Exception('Failed to fetch location: $e');
-    }
-  }
-
   void _onRefresh() async {
-    await _fetchData();
+    await _fetchTasks();
     _refreshController.refreshCompleted();
   }
 
@@ -123,38 +92,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(8.0),
         children: [
-          if (currentLocation != null) _buildMap(),
           _buildTaskSection('Undone Tasks', undoneTasks, Icons.check_box_outline_blank),
           _buildTaskSection('Done Tasks', doneTasks, Icons.check_box),
           _buildSummarySection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMap() {
-    return Container(
-      height: 200,
-      child: FlutterMap(
-        options: MapOptions(
-          initialCenter: currentLocation!,
-          initialZoom: 13.0,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                width: 80.0,
-                height: 80.0,
-                point: currentLocation!,
-                child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
-              ),
-            ],
-          ),
         ],
       ),
     );
