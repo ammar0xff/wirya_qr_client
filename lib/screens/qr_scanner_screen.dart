@@ -81,8 +81,12 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         scanLocation = placemarks.first.locality ?? "Unknown location";
       }
 
+      // Get the logged-in user's name
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? username = prefs.getString('username');
+
       // Send log to Telegram Bot
-      await TelegramLogger.sendLog(qrProfileInfo!, "user", scanLocation, position.latitude, position.longitude);
+      await TelegramLogger.sendLog(qrProfileInfo!, username ?? "Unknown user", scanLocation, position.latitude, position.longitude);
     } else {
       setState(() {
         errorMessage = "Profile not found.";

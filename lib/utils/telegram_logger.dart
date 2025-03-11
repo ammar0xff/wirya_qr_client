@@ -13,16 +13,16 @@ class TelegramLogger {
     String googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$latitude,$longitude";
     String message = """
 تمت عملية مسح جديدة:
- - التاريخ: $date
- - الماسح: $scannerName
- - الوقت: $time
- - رابط الموقع: $googleMapsLink
+- التاريخ: $date
+- الماسح: $scannerName
+- الوقت: $time
+- رابط الموقع: $googleMapsLink
 
 تفاصيل التاجر:
- - الاسم: ${qrProfileInfo['name']}
- - الفئة: ${qrProfileInfo['category']}
- - الهاتف: ${qrProfileInfo['phone']}
- - الموقع: ${qrProfileInfo['location']}
+- الاسم: ${qrProfileInfo['name']}
+- الفئة: ${qrProfileInfo['category']}
+- الهاتف: ${qrProfileInfo['phone']}
+- الموقع: ${qrProfileInfo['location']}
 """;
 
     String url = "https://api.telegram.org/bot$botToken/sendMessage";

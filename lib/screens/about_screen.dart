@@ -13,7 +13,7 @@ class AboutScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("Application Version: 1.0.0", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text("Developer: Your Name", style: TextStyle(fontSize: 16)),
+            Text("Developer: Ammar Mohamed\n 01558695202", style: TextStyle(fontSize: 16)),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
